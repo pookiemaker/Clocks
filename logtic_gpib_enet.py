@@ -4,21 +4,24 @@ killAllHumans = 0
 # modified by: Brian M.
 version = '2013-07-03'
 print ':: Agilent 53132A TIC Live Logger '+version
+print ':: Version for controlling a GPIB TIC over GPIB-Ethernet Bridge'
 
-# Initializes Agilent 9343C, does setup, writes to GPS & station SNRs to CSV File
+# Setup the imports to use for processign data
 import datetime     # For current date
 import time         # For process runtime
 import visa as v    # For instrument interface
 import sys          # For system calls
 
-#pyvisa change
+# pyvisa change -- requires pyVisa installed not using NI-VISA
 rm = v.ResourceManager('@py')
 
-# Options
+# Options:
 bridge = '192.168.44.133'   # GPIB Bridge IP
 delay = 1.0                 # Time between queries
 doFancyPlot = False
 
+# TODO: Error Checking Needs fixed for more user guidance
+# TODO: Also used to take command line parameter, no longer.
 #print sys.argv
 # Pull argv
 #if len(sys.argv) != 2:
@@ -32,19 +35,21 @@ doFancyPlot = False
 #except:
 #    print ':: ERR - could not understand input'
 
-# Initialize Variables
-gpib = '3' # manual override
+# Initialize Variables, Setup output file naming convention
+gpib = '3' # GPIB address of the REMOTE Time Interval Counter
 run = True
 now = datetime.datetime.now().isoformat()[0:19]
 outFile = 'gpib_'+gpib+'_'+now+'_TIClog.csv'
 
-# Startup TIC
+# Startup TIC -- TODO: Fix line to use above gpib variable
 try: tic = rm.open_resource('TCPIP::192.168.44.133::gpib0,3')
 #try: tic = v.instrument('TCPIP::192.168.1.21::gpib0,'+gpib)
 except:
 	print '   error -> Could not find instrument at',hsaIP
 	sys.exit(1)
 
+# TODO: Very specific TIC initialization for device being used
+# TODO: Setup of TIC has to be completed before starting collect
 #should initilialize TIC here, but am skipping for now...
 #hsa.write('*rst')
 #hsa.write(':system:configure:gps on')
@@ -58,13 +63,16 @@ log.write('TIC '+now+'\n')
 print ':: Logging to',outFile
 print '   ' + tic.ask('*idn?')
 
-if doFancyPlot:
+if doFancyPlot: # Currently non-functional
     #3d Plot stuff
     import numpy as np
     import matplotlib.pyplot as plt
     measurements = []
     plt.ion()
     #fig = plt.figure()
+
+# Main Loop Samples TIC every second or so. measures the time between Samples
+# for accurate readings. Cleanly exits on KeyboardInterrupt
 while run:
     # Detect and write
     try:
